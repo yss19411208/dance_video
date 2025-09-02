@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Otoge-2</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      color: #333;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    video {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
+    }
+
+    div {
+      background-color: #fff;
+      border-radius: 10px;
+      display: inline-block;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 600px;
+      width: 100%;
+    }
+
+    input[type="button"], button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    input[type="button"]:hover, button:hover {
+      background-color: #0056b3;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 5px;
+      margin-left: 5px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    label {
+      display: inline-block;
+      margin: 10px 5px;
+      font-size: 14px;
+    }
+
+    span {
+      font-weight: bold;
+    }
+
+    #message {
+      display: block;
+      margin-top: 10px;
+      font-size: 16px;
+      color: #007bff;
+    }
+
+    @media (max-width: 600px) {
+      div {
+        padding: 15px;
+      }
+
+      input[type="button"], button {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      input[type="number"] {
+        width: 60px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <video id="video" height="660" controls loop>
+    <source src="http://127.0.0.1:8880/1.mp4" type="video/mp4" />
+    お使いのブラウザは video タグに対応していません。
+  </video><br/>
+
+  <div>
+    <input type="button" value="再生" onClick="play()">
+    <input type="button" value="一時停止" onClick="pause()">
+    <br>
+
+    <input type="button" value="5秒前" onClick="seekDown()">
+    <input type="button" value="5秒後" onClick="seekUp()">
+    <br>
+
+    <input type="button" value="-0.2倍" onClick="changeSpeed(-0.2)">
+    <input type="button" value="+0.2倍" onClick="changeSpeed(0.2)">
+    <input type="button" value="元の速度" onClick="setSpeed(1)">
+    <br>
+
+    <label>
+      開始 (秒):
+      <input type="number" id="start" value="0" min="0" step="0.1" />
+    </label>
+    <label>
+      終了 (秒):
+      <input type="number" id="end" value="172.919002" min="0" step="0.1" />
+    </label>
+    <button id="apply">適用</button>
+    <button id="loop">ループ再生</button>
+    <br>
+
+    現在（秒）：<span id="position">0</span><br>
+    全体（秒）：<span id="length"></span><br>
+    再生速度  ：<span id="speed">1.0</span><br>
+    音量      ：<span id="volume">1.0</span><br>
+    <span id="message"></span>
+  </div>
+
+  <script>
+    const startInput = document.getElementById('start');
+    const endInput = document.getElementById('end');
+    const applyBtn = document.getElementById('apply');
+    const loopBtn = document.getElementById('loop');
+    const video = document.getElementById("video");
+    let v;
+
+    function init(){
+        v = video;
+        v.addEventListener("timeupdate", function(){
+            document.getElementById("position").innerHTML = v.currentTime.toFixed(2);
+            document.getElementById("speed").innerHTML = v.playbackRate.toFixed(1);
+        }, false);
+
+        v.onloadeddata = function() {
+            document.getElementById("length").innerHTML = v.duration.toFixed(2);
+        }
+
+        v.addEventListener("ended", function(){
+            document.getElementById("message").innerHTML = "finished";
+        }, false);
+
+        v.addEventListener("pause", function(){
+            document.getElementById("message").innerHTML = "paused";
+        }, false);
+
+        v.addEventListener("play", function(){
+            document.getElementById("message").innerHTML = "play";
+        }, false);
+    }
+
+    let range = { start: 0, end: 172.919002 };
+
+    function applyRange() {
+        const s = parseFloat(startInput.value);
+        const e = parseFloat(endInput.value);
+        if (isNaN(s) || isNaN(e) || s < 0 || e <= s) {
+            alert('開始位置と終了位置を正しく設定してください。開始 < 終了、0以上の数値を指定してください。');
+            return;
+        }
+        range.start = s;
+        range.end = e;
+    }
+
+    applyRange();
+    applyBtn.addEventListener('click', applyRange);
+
+    video.addEventListener('timeupdate', function() {
+        if (looping && video.currentTime > range.end) {
+            video.currentTime = range.start;
+            video.play();
+        }
+    });
+
+    let looping = false;
+    loopBtn.addEventListener('click', function() {
+        looping = !looping;
+        if (looping) {
+            video.currentTime = range.start;
+            video.play();
+            loopBtn.textContent = 'ループ停止';
+        } else {
+            loopBtn.textContent = 'ループ再生';
+        }
+    });
+
+    function play() {
+        v.play();
+    }
+
+    function pause() {
+        v.pause();
+    }
+
+    function changeSpeed(val) {
+        v.playbackRate = Math.max(0.2, v.playbackRate + val);
+    }
+
+    function setSpeed(speed) {
+        v.playbackRate = Math.max(0.1, speed);
+    }
+
+    function changeVolume(val) {
+        v.volume = Math.min(1.0, Math.max(0.0, v.volume + val));
+        document.getElementById("volume").innerHTML = v.volume.toFixed(1);
+    }
+
+    function setVolume(val) {
+        v.volume = Math.min(1.0, Math.max(0.0, val));
+    }
+
+    function seekUp() {
+        v.currentTime += 5;
+    }
+
+    function seekDown() {
+        v.currentTime -= 5;
+    }
+
+    init();
+  </script>
+</body>
+</html>
